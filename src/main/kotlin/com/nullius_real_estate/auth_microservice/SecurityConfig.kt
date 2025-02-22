@@ -14,8 +14,13 @@ class SecurityConfig {
     fun securityFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
         http
             .csrf { it.disable() }
-            .authorizeExchange{
-                it.anyExchange().permitAll()
+            .authorizeExchange {
+                it.pathMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                it.anyExchange().authenticated()
+            }
+            .oauth2Client { }
+            .oauth2ResourceServer {
+                it.jwt { }
             }
         return http.build()
     }

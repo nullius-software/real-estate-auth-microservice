@@ -64,7 +64,7 @@ class AuthController(
             .map { context ->
                 val jwt = context.authentication.principal as Jwt
                 mapOf(
-                    "externalId" to jwt.subject,
+                    "id" to jwt.subject,
                     "email" to (jwt.getClaimAsString("email") ?: "unknown"),
                     "token" to jwt.tokenValue
                 )
