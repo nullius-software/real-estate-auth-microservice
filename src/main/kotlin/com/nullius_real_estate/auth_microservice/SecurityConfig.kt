@@ -15,7 +15,15 @@ class SecurityConfig {
         http
             .csrf { it.disable() }
             .authorizeExchange {
-                it.pathMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                it.pathMatchers(
+                    "/login",
+                    "/register",
+
+//                    Docs
+                    "/webjars/**",
+                    "/swagger-ui/**",
+                    "/v3/**",
+                ).permitAll()
                 it.anyExchange().authenticated()
             }
             .oauth2Client { }

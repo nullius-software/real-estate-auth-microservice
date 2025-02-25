@@ -7,13 +7,11 @@ import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
 
 @RestController
-@RequestMapping("api/auth")
 class AuthController(
     private val webClient: WebClient,
     @Value("\${user-service.url:http://localhost:8090/api/user}") private val userServiceUrl: String,
