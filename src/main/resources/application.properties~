@@ -25,6 +25,6 @@ logging.level.org.keycloak=INFO
 
 # Documentation
 springdoc.api-docs.enabled=true
-springdoc.api-docs.path=/api/auth/v3/api-docs
+
 springdoc.swagger-ui.enabled=true
 springdoc.swagger-ui.path=/api/auth/swagger-ui.html
