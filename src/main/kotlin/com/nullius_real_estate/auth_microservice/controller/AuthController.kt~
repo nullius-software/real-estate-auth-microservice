@@ -135,10 +135,11 @@ class AuthController(
             .retrieve()
             .bodyToMono(object : ParameterizedTypeReference<Map<String, Any>>() {})
             .flatMap { tokenResponse ->
-                val accessToken = tokenResponse["access_token"] as String
+                println("tokenResponse")
+                println(tokenResponse)
                 webClient.delete()
                     .uri("$keycloakAdminUrl/admin/realms/$keycloakRealm/users/${userId}")
-                    .header("Authorization", "Bearer $accessToken")
+                    .header("Authorization", "Bearer $tokenResponse")
                     .retrieve()
                     .toBodilessEntity()
                     .map { mapOf("message" to "User deleted") }
