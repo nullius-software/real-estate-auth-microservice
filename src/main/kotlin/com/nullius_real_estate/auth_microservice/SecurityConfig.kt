@@ -18,6 +18,7 @@ class SecurityConfig {
                 it.pathMatchers(
                     "/login",
                     "/register",
+                    "/user/{keycloakUserId}/is-verified",
 
 //                    Docs
                     "/webjars/**",

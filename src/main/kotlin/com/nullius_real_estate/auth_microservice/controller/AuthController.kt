@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.security.core.context.ReactiveSecurityContextHolder
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
@@ -62,6 +63,28 @@ class AuthController(
                         .body(mapOf("message" to ex.message))
                 )
             }
+    }
+
+    @GetMapping("/user/{keycloakUserId}/is-verified")
+    fun isUserVerified(@PathVariable keycloakUserId: String): Mono<ResponseEntity<Boolean>> {
+        return getAdminToken().flatMap { accessToken ->
+            webClient.get()
+                .uri("$keycloakAdminUrl/admin/realms/$keycloakRealm/users/$keycloakUserId")
+                .header("Authorization", "Bearer $accessToken")
+                .retrieve()
+                .bodyToMono(object : ParameterizedTypeReference<Map<String, Any>>() {})
+                .map { user ->
+                    ResponseEntity.ok(
+                        user["emailVerified"] as? Boolean ?: false
+                    )
+                }
+                .onErrorResume(WebClientResponseException::class.java) { ex ->
+                    Mono.just(
+                        ResponseEntity.status(ex.statusCode.value())
+                            .body(false)
+                    )
+                }
+        }
     }
 
     @GetMapping("/user")
@@ -123,7 +146,7 @@ class AuthController(
             }
     }
 
-    private fun deleteUserInKeycloak(userId: String): Mono<Map<String, String>> {
+    private fun getAdminToken(): Mono<String> {
         return webClient.post()
             .uri("$keycloakAdminUrl/realms/$keycloakRealm/protocol/openid-connect/token")
             .header("Content-Type", "application/x-www-form-urlencoded")
@@ -134,54 +157,46 @@ class AuthController(
             )
             .retrieve()
             .bodyToMono(object : ParameterizedTypeReference<Map<String, Any>>() {})
-            .flatMap { tokenResponse ->
-                val accessToken = tokenResponse["access_token"] as String
-                webClient.delete()
-                    .uri("$keycloakAdminUrl/admin/realms/$keycloakRealm/users/${userId}")
-                    .header("Authorization", "Bearer $accessToken")
-                    .retrieve()
-                    .toBodilessEntity()
-                    .map { mapOf("message" to "User deleted") }
-            }
+            .map { it["access_token"] as String }
+    }
+
+    private fun deleteUserInKeycloak(userId: String): Mono<Map<String, String>> {
+        return getAdminToken().flatMap { accessToken ->
+            webClient.delete()
+                .uri("$keycloakAdminUrl/admin/realms/$keycloakRealm/users/$userId")
+                .header("Authorization", "Bearer $accessToken")
+                .retrieve()
+                .toBodilessEntity()
+                .map { mapOf("message" to "User deleted") }
+        }
     }
 
     private fun createUserInKeycloak(userRequest: UserRequest): Mono<Pair<String, String>> {
-        return webClient.post()
-            .uri("$keycloakAdminUrl/realms/$keycloakRealm/protocol/openid-connect/token")
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .bodyValue(
-                "grant_type=client_credentials" +
-                        "&client_id=$keycloakClientId" +
-                        "&client_secret=$keycloakClientSecret"
-            )
-            .retrieve()
-            .bodyToMono(object : ParameterizedTypeReference<Map<String, Any>>() {})
-            .flatMap { tokenResponse ->
-                val accessToken = tokenResponse["access_token"] as String
-                webClient.post()
-                    .uri("$keycloakAdminUrl/admin/realms/$keycloakRealm/users")
-                    .header("Authorization", "Bearer $accessToken")
-                    .header("Content-Type", "application/json")
-                    .bodyValue(
-                        mapOf(
-                            "email" to userRequest.email,
-                            "enabled" to true,
-                            "credentials" to listOf(
-                                mapOf(
-                                    "type" to "password",
-                                    "value" to userRequest.password,
-                                    "temporary" to false
-                                )
+        return getAdminToken().flatMap { accessToken ->
+            webClient.post()
+                .uri("$keycloakAdminUrl/admin/realms/$keycloakRealm/users")
+                .header("Authorization", "Bearer $accessToken")
+                .header("Content-Type", "application/json")
+                .bodyValue(
+                    mapOf(
+                        "email" to userRequest.email,
+                        "enabled" to true,
+                        "credentials" to listOf(
+                            mapOf(
+                                "type" to "password",
+                                "value" to userRequest.password,
+                                "temporary" to false
                             )
                         )
                     )
-                    .retrieve()
-                    .toBodilessEntity()
-                    .map { response ->
-                        val keycloackUserId = response.headers["Location"]?.first()?.split("/")?.last() ?: "unknown"
-                        Pair(keycloackUserId, accessToken)
-                    }
-            }
+                )
+                .retrieve()
+                .toBodilessEntity()
+                .map { response ->
+                    val keycloackUserId = response.headers["Location"]?.first()?.split("/")?.last() ?: "unknown"
+                    Pair(keycloackUserId, accessToken)
+                }
+        }
     }
 }
 
