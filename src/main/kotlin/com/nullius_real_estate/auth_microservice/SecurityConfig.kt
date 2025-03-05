@@ -19,6 +19,7 @@ class SecurityConfig {
                     "/login",
                     "/register",
                     "/user/{keycloakUserId}/is-verified",
+                    "/user/{keycloakUserId}/resend-verification-email",
 
 //                    Docs
                     "/webjars/**",
