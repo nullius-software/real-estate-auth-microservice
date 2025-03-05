@@ -50,10 +50,10 @@ class AuthController(
             .map { response ->
                 ResponseEntity.ok(
                     mapOf(
-                        "access_token" to (response["access_token"] ?: ""),
-                        "refresh_token" to (response["refresh_token"] ?: ""),
-                        "expires_in" to (response["expires_in"] ?: 0),
-                        "token_type" to (response["token_type"] ?: "Bearer")
+                        "accessToken" to (response["access_token"] ?: ""),
+                        "refreshToken" to (response["refresh_token"] ?: ""),
+                        "expiresIn" to (response["expires_in"] ?: 0),
+                        "tokenType" to (response["token_type"] ?: "Bearer")
                     )
                 )
             }
