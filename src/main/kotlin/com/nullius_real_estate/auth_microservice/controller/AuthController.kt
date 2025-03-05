@@ -87,6 +87,11 @@ class AuthController(
         }
     }
 
+    @PostMapping("/user/{keycloakUserId}/resend-verification-email")
+    fun resendVerificationEmail(@PathVariable keycloakUserId: String): Mono<ResponseEntity<Map<String, String>>> {
+        return sendVerificationEmail(keycloakUserId)
+    }
+
     @GetMapping("/user")
     fun getUser(): Mono<ResponseEntity<Map<String, String>>> {
         return ReactiveSecurityContextHolder.getContext()
@@ -126,7 +131,11 @@ class AuthController(
                     )
                     .retrieve()
                     .bodyToMono(object : ParameterizedTypeReference<Map<String, Any>>() {})
-                    .map { ResponseEntity.ok(mapOf("message" to "User registered", "data" to it)) }
+                    .flatMap {
+                        sendVerificationEmail(keycloakUserId).thenReturn(
+                            ResponseEntity.ok(mapOf("message" to "User registered", "data" to it))
+                        )
+                    }
                     .onErrorResume(WebClientResponseException::class.java) { ex ->
                         deleteUserInKeycloak(keycloakUserId)
                             .flatMap {
@@ -144,6 +153,23 @@ class AuthController(
                         .body(mapOf("message" to ex.message))
                 )
             }
+    }
+
+    private fun sendVerificationEmail(keycloakUserId: String): Mono<ResponseEntity<Map<String, String>>> {
+        return getAdminToken().flatMap { accessToken ->
+            webClient.put()
+                .uri("$keycloakAdminUrl/admin/realms/$keycloakRealm/users/$keycloakUserId/send-verify-email")
+                .header("Authorization", "Bearer $accessToken")
+                .retrieve()
+                .toBodilessEntity()
+                .map { ResponseEntity.ok(mapOf("message" to "Verification email sent")) }
+                .onErrorResume(WebClientResponseException::class.java) { ex ->
+                    Mono.just(
+                        ResponseEntity.status(ex.statusCode.value())
+                            .body(mapOf("message" to ex.message))
+                    )
+                }
+        }
     }
 
     private fun getAdminToken(): Mono<String> {
